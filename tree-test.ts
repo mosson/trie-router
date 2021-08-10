@@ -16,8 +16,6 @@ function orangeHandler(request: ServerRequest): void {
   request.respond({ body: "orange" });
 }
 
-orangeHandler;
-
 Deno.test("Tree test", () => {
   const tree: Tree<Handlers> = new Tree();
   assertEquals(tree.search("/foo/bar"), undefined);

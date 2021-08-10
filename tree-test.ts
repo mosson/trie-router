@@ -20,54 +20,54 @@ orangeHandler;
 
 Deno.test("Tree test", () => {
   const tree: Tree<Handlers> = new Tree();
-  assertEquals(tree.staticSearch("/foo/bar"), undefined);
-  assertEquals(tree.staticSearch("/foo/baz"), undefined);
+  assertEquals(tree.search("/foo/bar"), undefined);
+  assertEquals(tree.search("/foo/baz"), undefined);
 
   tree.insert("/foo/bar", [appleHandler]);
 
-  let apple = tree.staticSearch("/foo/bar");
+  let apple = tree.search("/foo/bar");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  apple = tree.staticSearch("//foo/bar");
+  apple = tree.search("//foo/bar");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  apple = tree.staticSearch("/foo/bar/");
+  apple = tree.search("/foo/bar/");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  assertEquals(tree.staticSearch("/foo/baz"), undefined);
-  assertEquals(tree.staticSearch("/foo"), undefined);
-  assertEquals(tree.staticSearch("/bar"), undefined);
-  assertEquals(tree.staticSearch("/baz"), undefined);
+  assertEquals(tree.search("/foo/baz"), undefined);
+  assertEquals(tree.search("/foo"), undefined);
+  assertEquals(tree.search("/bar"), undefined);
+  assertEquals(tree.search("/baz"), undefined);
 
   tree.insert("/foo", [orangeHandler]);
 
-  apple = tree.staticSearch("/foo/bar");
+  apple = tree.search("/foo/bar");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  apple = tree.staticSearch("//foo/bar");
+  apple = tree.search("//foo/bar");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  apple = tree.staticSearch("/foo/bar/");
+  apple = tree.search("/foo/bar/");
   assertExists(apple);
   if (apple) assertEquals(apple.data, [appleHandler]);
 
-  let orange = tree.staticSearch("/foo");
+  let orange = tree.search("/foo");
   assertExists(orange);
   if (orange) assertEquals(orange.data, [orangeHandler]);
 
-  orange = tree.staticSearch("/foo/");
+  orange = tree.search("/foo/");
   assertExists(orange);
   if (orange) assertEquals(orange.data, [orangeHandler]);
 
-  assertEquals(tree.staticSearch("/fo"), undefined);
-  assertEquals(tree.staticSearch("/fooo"), undefined);
-  assertEquals(tree.staticSearch("/bar"), undefined);
-  assertEquals(tree.staticSearch("/baz"), undefined);
+  assertEquals(tree.search("/fo"), undefined);
+  assertEquals(tree.search("/fooo"), undefined);
+  assertEquals(tree.search("/bar"), undefined);
+  assertEquals(tree.search("/baz"), undefined);
 
   try {
     tree.delete("apple");
@@ -76,5 +76,5 @@ Deno.test("Tree test", () => {
   }
 
   tree.delete("/foo");
-  assertEquals(tree.staticSearch("/foo"), undefined);
+  assertEquals(tree.search("/foo"), undefined);
 });

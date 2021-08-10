@@ -28,7 +28,7 @@ export class Tree<T> {
     if (!node.leaf) node.leaf = new Leaf<T>(handler);
   }
 
-  public staticSearch(path: string): Leaf<T> | undefined {
+  public search(path: string): Leaf<T> | undefined {
     const seq = Tree.normalize(path);
     let node: Node<T> | undefined = this.root;
     for (let i = 0; i < seq.length; i++) {

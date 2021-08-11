@@ -24,7 +24,11 @@ export class Tree<T> {
     return text.substr(1).split("&").reduce(
       (params: Params, fragment: string) => {
         const pair = fragment.split("=");
-        if (pair[0]) params[pair[0]] = pair.slice(1).join("");
+        if (pair[0]) {
+          params[decodeURIComponent(pair[0])] = decodeURIComponent(
+            pair.slice(1).join(""),
+          );
+        }
         return params;
       },
       {},

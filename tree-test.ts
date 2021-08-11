@@ -182,10 +182,45 @@ Deno.test("#search with URL Parameters", () => {
     assertEquals(result[1], { bar: "baz", hoge: "fuga" });
   }
 
+  // 中身がないものは無視されるか
   result = tree.search("/foo?bar=baz&&&");
   assertExists(result);
   if (result) {
     assertEquals(result[0].data, "foo");
     assertEquals(result[1], { bar: "baz" });
+  }
+
+  // valueがないものは空文字で定義される
+  result = tree.search("/foo?bar=baz&hoge");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { bar: "baz", hoge: "" });
+  }
+
+  result = tree.search("/foo?bar=baz&hoge=");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { bar: "baz", hoge: "" });
+  }
+
+  // URIエンコード
+  result = tree.search(
+    "/foo?%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%82%8F=%E4%B8%96%E7%95%8C",
+  );
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { "こんにちわ": "世界" });
+  }
+
+  result = tree.search(
+    "/foo?key=%E3%81%82%3D%3D%3D%E3%81%82",
+  );
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { key: "あ===あ" });
   }
 });

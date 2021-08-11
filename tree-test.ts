@@ -163,3 +163,29 @@ Deno.test("同一の解釈ができる別名パラメータールートは先に
     assertEquals(result[1], { id: "123" });
   }
 });
+
+Deno.test("#search with URL Parameters", () => {
+  const tree = new Tree<string>();
+  tree.insert("/foo", "foo");
+
+  let result = tree.search("/foo?bar=baz");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { bar: "baz" });
+  }
+
+  result = tree.search("/foo?bar=baz&hoge=fuga");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { bar: "baz", hoge: "fuga" });
+  }
+
+  result = tree.search("/foo?bar=baz&&&");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "foo");
+    assertEquals(result[1], { bar: "baz" });
+  }
+});

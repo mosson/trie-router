@@ -1,6 +1,8 @@
 import { normalize } from "https://deno.land/std@0.103.0/path/mod.ts";
 import { Leaf, Node } from "./node.ts";
 
+type Params = { [key: string]: string };
+
 export class Tree<T> {
   private static normalize(path: string): string[] {
     const normalized = normalize(path).split("/");
@@ -28,15 +30,32 @@ export class Tree<T> {
     if (!node.leaf) node.leaf = new Leaf<T>(handler);
   }
 
-  public search(path: string): Leaf<T> | undefined {
+  public search(path: string): [Leaf<T>, Params] | undefined {
     const seq = Tree.normalize(path);
     let node: Node<T> | undefined = this.root;
+    const params: Params = {};
     for (let i = 0; i < seq.length; i++) {
-      node = node.search(seq.slice(i, i + 1)[0]);
+      const fragment: string = seq.slice(i, i + 1)[0];
+
+      node = node.search(fragment);
       if (!node) return undefined;
+
+      // パラメーターの読み取り
+      if (node.isVariable && node.variableName) {
+        params[node.variableName] = fragment;
+      }
+
+      // ワイルドカードの場合はスラッシュの区切り以後も全て読み出し
+      if (node.isWildcard) {
+        if (node.variableName) {
+          params[node.variableName] = seq.slice(i).join("/");
+        }
+        break;
+      }
     }
 
-    return node.leaf;
+    if (!node.leaf) return undefined;
+    return [node.leaf, params];
   }
 
   public delete(path: string): void {

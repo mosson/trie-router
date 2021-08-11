@@ -16,7 +16,7 @@ function orangeHandler(request: ServerRequest): void {
   request.respond({ body: "orange" });
 }
 
-Deno.test("Tree test", () => {
+Deno.test("静的なルート", () => {
   const tree: Tree<Handlers> = new Tree();
   assertEquals(tree.search("/foo/bar"), undefined);
   assertEquals(tree.search("/foo/baz"), undefined);
@@ -25,15 +25,16 @@ Deno.test("Tree test", () => {
 
   let apple = tree.search("/foo/bar");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
+  // 入力パスは正規化される
   apple = tree.search("//foo/bar");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
   apple = tree.search("/foo/bar/");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
   assertEquals(tree.search("/foo/baz"), undefined);
   assertEquals(tree.search("/foo"), undefined);
@@ -44,23 +45,23 @@ Deno.test("Tree test", () => {
 
   apple = tree.search("/foo/bar");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
   apple = tree.search("//foo/bar");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
   apple = tree.search("/foo/bar/");
   assertExists(apple);
-  if (apple) assertEquals(apple.data, [appleHandler]);
+  if (apple) assertEquals(apple[0].data, [appleHandler]);
 
   let orange = tree.search("/foo");
   assertExists(orange);
-  if (orange) assertEquals(orange.data, [orangeHandler]);
+  if (orange) assertEquals(orange[0].data, [orangeHandler]);
 
   orange = tree.search("/foo/");
   assertExists(orange);
-  if (orange) assertEquals(orange.data, [orangeHandler]);
+  if (orange) assertEquals(orange[0].data, [orangeHandler]);
 
   assertEquals(tree.search("/fo"), undefined);
   assertEquals(tree.search("/fooo"), undefined);
@@ -75,4 +76,90 @@ Deno.test("Tree test", () => {
 
   tree.delete("/foo");
   assertEquals(tree.search("/foo"), undefined);
+});
+
+Deno.test("パラメータールート", () => {
+  const tree: Tree<Handlers> = new Tree();
+
+  tree.insert("/:id/:sub_id", [orangeHandler]);
+  let result = tree.search("/123/456");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, [orangeHandler]);
+    assertEquals(result[1], { id: "123", sub_id: "456" });
+  }
+
+  // 先に登録した方が勝つが、スラッシュで区切られたフレーズは守られるか
+  tree.insert("/:id", [appleHandler]);
+  result = tree.search("/123");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, [appleHandler]);
+    assertEquals(result[1], { id: "123" });
+  }
+
+  result = tree.search("/123/456");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, [orangeHandler]);
+    assertEquals(result[1], { id: "123", sub_id: "456" });
+  }
+
+  // 末尾のスラッシュが読み捨てられるか
+  result = tree.search("/hoge-fuga-boon/");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, [appleHandler]);
+    assertEquals(result[1], { id: "hoge-fuga-boon" });
+  }
+});
+
+Deno.test("ワイルドカードルート", () => {
+  const tree: Tree<string> = new Tree();
+  tree.insert("/api/v1/surveys", "surveys");
+  tree.insert("/api/v1/*catch_all", "API 404");
+  tree.insert("/*", "All 404");
+
+  let result = tree.search("/api/v1/surveys");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "surveys");
+    assertEquals(result[1], {});
+  }
+
+  result = tree.search("/api/v1/hoge");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "API 404");
+    assertEquals(result[1], { catch_all: "hoge" });
+  }
+
+  result = tree.search("/api/v1/foo/bar");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "API 404");
+    assertEquals(result[1], { catch_all: "foo/bar" });
+  }
+
+  result = tree.search("/foo/bar/baz");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, "All 404");
+    assertEquals(result[1], {});
+  }
+});
+
+Deno.test("同一の解釈ができる別名パラメータールートは先に登録した方が勝つ", () => {
+  // ルートの登録順が優先度順になる
+  // ルートが長い方が強いとか静的なものの方がつよいとかしたい場合は探索を別の方法にする必要あり
+  const tree: Tree<Handlers> = new Tree();
+
+  tree.insert("/:id", [appleHandler]);
+  tree.insert("/:sub_id", [orangeHandler]);
+  const result = tree.search("/123");
+  assertExists(result);
+  if (result) {
+    assertEquals(result[0].data, [appleHandler]);
+    assertEquals(result[1], { id: "123" });
+  }
 });

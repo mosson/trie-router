@@ -4,6 +4,7 @@ import {
 } from "https://deno.land/std@0.103.0/testing/asserts.ts";
 import { ServerRequest } from "https://deno.land/std@0.103.0/http/server.ts";
 import { Tree } from "./tree.ts";
+import { analyze } from "./url-analyzer.ts";
 
 type Handler = (request: ServerRequest) => void;
 type Handlers = Handler[];
@@ -17,7 +18,7 @@ function orangeHandler(request: ServerRequest): void {
 }
 
 Deno.test("静的なルート", () => {
-  const tree: Tree<Handlers> = new Tree();
+  const tree: Tree<Handlers> = new Tree(analyze);
   assertEquals(tree.search("/foo/bar"), undefined);
   assertEquals(tree.search("/foo/baz"), undefined);
 
@@ -79,7 +80,7 @@ Deno.test("静的なルート", () => {
 });
 
 Deno.test("パラメータールート", () => {
-  const tree: Tree<Handlers> = new Tree();
+  const tree: Tree<Handlers> = new Tree(analyze);
 
   tree.insert("/:id/:sub_id", [orangeHandler]);
   let result = tree.search("/123/456");
@@ -115,7 +116,7 @@ Deno.test("パラメータールート", () => {
 });
 
 Deno.test("ワイルドカードルート", () => {
-  const tree: Tree<string> = new Tree();
+  const tree: Tree<string> = new Tree(analyze);
   tree.insert("/api/v1/surveys", "surveys");
   tree.insert("/api/v1/*catch_all", "API 404");
   tree.insert("/*", "All 404");
@@ -152,7 +153,7 @@ Deno.test("ワイルドカードルート", () => {
 Deno.test("同一の解釈ができる別名パラメータールートは先に登録した方が勝つ", () => {
   // ルートの登録順が優先度順になる
   // ルートが長い方が強いとか静的なものの方がつよいとかしたい場合は探索を別の方法にする必要あり
-  const tree: Tree<Handlers> = new Tree();
+  const tree: Tree<Handlers> = new Tree(analyze);
 
   tree.insert("/:id", [appleHandler]);
   tree.insert("/:sub_id", [orangeHandler]);
@@ -165,7 +166,7 @@ Deno.test("同一の解釈ができる別名パラメータールートは先に
 });
 
 Deno.test("#search with URL Parameters", () => {
-  const tree = new Tree<string>();
+  const tree = new Tree<string>(analyze);
   tree.insert("/foo", "foo");
 
   let result = tree.search("/foo?bar=baz");

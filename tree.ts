@@ -1,24 +1,10 @@
-import { normalize } from "https://deno.land/std@0.103.0/path/mod.ts";
 import { Leaf, Node } from "./node.ts";
 
 type Params = { [key: string]: string };
 
+export type Analyzer = (data: string) => string[];
+
 export class Tree<T> {
-  private static normalize(path: string): string[] {
-    let normalized = normalize(path).split("/");
-    const head = normalized.slice(0, -1);
-    let tail = normalized.slice(-1)[0].split("?");
-    if (tail.length > 1) {
-      tail = tail.slice(0, -1).concat([
-        "?" + tail.slice(-1).join(""),
-      ]);
-    }
-    normalized = head.concat(tail);
-
-    if (normalized.slice(-1)[0] === "") normalized.pop();
-    return normalized;
-  }
-
   private static resolveQuery(text: string): Params {
     if (!text || text.substr(0, 1) !== "?") return {};
     return text.substr(1).split("&").reduce(
@@ -36,13 +22,15 @@ export class Tree<T> {
   }
 
   private root: Node<T>;
+  private analyze: Analyzer;
 
-  constructor() {
+  constructor(analyze: Analyzer) {
     this.root = new Node<T>(undefined);
+    this.analyze = analyze;
   }
 
   public insert(path: string, handler: T) {
-    const seq = Tree.normalize(path);
+    const seq = this.analyze(path);
 
     let node: Node<T> = this.root;
     for (let i = 0; i < seq.length; i++) {
@@ -57,7 +45,7 @@ export class Tree<T> {
   }
 
   public search(path: string): [Leaf<T>, Params] | undefined {
-    const seq = Tree.normalize(path);
+    const seq = this.analyze(path);
     let params: Params = {};
 
     // pathにURLパラメーターが含まれる場合はparamsに代入して、探査からは除外する
@@ -94,7 +82,7 @@ export class Tree<T> {
   }
 
   public delete(path: string): void {
-    const seq = Tree.normalize(path);
+    const seq = this.analyze(path);
     let node: Node<T> | undefined = this.root;
     for (let i = 0; i < seq.length; i++) {
       node = node.search(seq.slice(i, i + 1)[0]);

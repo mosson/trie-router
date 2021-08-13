@@ -1,6 +1,6 @@
 import { Leaf, Node } from "./node.ts";
 
-type Params = { [key: string]: string };
+export type Params = { [key: string]: string };
 
 export type Analyzer = (data: string) => string[];
 

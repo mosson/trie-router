@@ -1,20 +1,28 @@
 import { Params } from "./tree.ts";
+import { MemoryStore } from "./request-context/memory-store.ts";
+
+export interface Store {
+  create: (requestID: string, params: Params) => Params;
+  read: (requestID: string) => Params | undefined;
+  delete: (requestID: string) => Params;
+}
 
 export class RequestContext {
-  private static paramsStore: { [key: string]: Params } = {};
+  public static store: Store = new MemoryStore();
 
-  public static add(requestID: string, params: Params): Params {
-    this.paramsStore[requestID] = params;
-    return params;
+  public static init(store: Store) {
+    this.store = store;
   }
 
-  public static getParams(requestID: string): Params | undefined {
-    return this.paramsStore[requestID];
+  public static create(requestID: string, params: Params): Params {
+    return this.store.create(requestID, params);
+  }
+
+  public static read(requestID: string): Params | undefined {
+    return this.store.read(requestID);
   }
 
   public static delete(requestID: string): Params {
-    const params = this.paramsStore[requestID];
-    delete this.paramsStore[requestID];
-    return params;
+    return this.store.delete(requestID);
   }
 }

@@ -98,7 +98,7 @@ export class Router {
     }();
 
     const requestID = crypto.randomUUID();
-    RequestContext.add(requestID, params);
+    RequestContext.create(requestID, params);
 
     // TODO: log request information
 

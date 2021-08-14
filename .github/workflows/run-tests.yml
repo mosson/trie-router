@@ -10,9 +10,7 @@ jobs:
         uses: denoland/setup-deno@v1
         with:
           deno-version: 1.12.2
-      - name: "enable globstar"
-        run: |
-          shopt -s globstar
       - name: "Runs Test"
         run: |
+          shopt -s globstar
           deno test ./**/*test.ts

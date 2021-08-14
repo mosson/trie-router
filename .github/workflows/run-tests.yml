@@ -1,0 +1,18 @@
+name: Run tests
+on: [push]
+jobs:
+  Run-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: "Setup Deno environment"
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: 1.12.2
+      - name: "enable globstar"
+        run: |
+          shopt -s globstar
+      - name: "Runs Test"
+        run: |
+          deno test ./**/*test.ts

@@ -3,6 +3,9 @@ import { Tree } from "./tree.ts";
 import { RequestContext } from "./request-context.ts";
 import { analyze } from "./url-analyzer.ts";
 
+export class MethodNotAllowed extends Error {}
+export class NoRoutesMatched extends Error {}
+
 const HandleMethods = {
   GET: "GET",
   POST: "POST",
@@ -26,7 +29,7 @@ type Routes<T> = {
 export type Handler = (
   request: ServerRequest,
   requestID: string,
-  next?: Handler,
+  next: () => Handler | undefined,
 ) => void;
 
 export class Router {
@@ -78,17 +81,18 @@ export class Router {
 
   public resolve(request: ServerRequest) {
     const method: Method | string = request.method.toUpperCase();
-    if (!isMethod(method)) return; // throw unexpected method
+
+    if (!isMethod(method)) throw new MethodNotAllowed("method not allowed.");
 
     const tree: Tree<Handler[]> = this.routes[method];
-    if (!tree) return; // throw StandardError; unexpected behavior caused by initializing process.
+    if (!tree) throw new Error("missing the route tree");
 
     const route = tree.search(request.url);
-    if (!route) return; // throw no routes matche;
+    if (!route) throw new NoRoutesMatched("no routes matched.");
 
     const [leaf, params] = route;
     const handlers: Handler[] = leaf.data;
-    if (!handlers[0]) return; //throw no handler;
+    if (!handlers[0]) throw new NoRoutesMatched("missing handler(s).");
 
     const next = function (i?: number) {
       return function () {
@@ -99,8 +103,6 @@ export class Router {
 
     const requestID = crypto.randomUUID();
     RequestContext.create(requestID, params);
-
-    // TODO: log request information
 
     try {
       next()(request, requestID, next);

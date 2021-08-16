@@ -13,4 +13,4 @@ jobs:
       - name: "Runs Test"
         run: |
           shopt -s globstar
-          deno test ./**/*test.ts
+          deno test --allow-all ./**/*test.ts

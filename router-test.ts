@@ -1,19 +1,11 @@
-import {
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.103.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.103.0/testing/asserts.ts";
 import {
   serve,
   Server,
   ServerRequest,
 } from "https://deno.land/std@0.103.0/http/server.ts";
-import {
-  Handler,
-  MethodNotAllowed,
-  NoRoutesMatched,
-  Router,
-} from "./router.ts";
-import { RequestContext } from "./request-context.ts";
+import { MethodNotAllowed, NoRoutesMatched, Router } from "./router.ts";
+import { Params } from "./tree.ts";
 
 const port = 50000 + Math.round(Math.random() * 10000);
 const server: Server = serve({ port: port });
@@ -54,29 +46,15 @@ setTimeout(async () => {
 });
 
 const router: Router = new Router();
-router.get("/get/action", [assertionHandler]);
-router.get("/get/empty-handler", []);
-router.get("/get/:id/parameters", [assertionHandler]);
-router.post("/post/action", [assertionHandler]);
-router.post("/post/:resource_id/parameters", [assertionHandler]);
-router.get("/middleware/example", [exampleCookieMiddleware, assertionHandler]);
-
-class ExampleCookieStore {
-  private static database: { [key: string]: string } = {};
-  public static create(key: string, value: string) {
-    this.database[key] = value;
-  }
-  public static read(key: string): string | undefined {
-    return this.database[key];
-  }
-}
+router.get("/get/action", assertionHandler);
+router.get("/get/:id/parameters", assertionHandler);
+router.post("/post/action", assertionHandler);
+router.post("/post/:resource_id/parameters", assertionHandler);
 
 function assertionHandler(
   request: ServerRequest,
-  requestID: string,
-  _next: () => Handler | undefined,
+  params: Params,
 ) {
-  const params = RequestContext.read(requestID);
   const body = {
     url: request.url,
     method: request.method,
@@ -84,26 +62,8 @@ function assertionHandler(
   };
   request.respond({
     status: 200,
-    headers: new Headers({
-      "X-Request-ID": requestID,
-      "Set-Cookie": ExampleCookieStore.read(requestID) || "",
-    }),
     body: JSON.stringify(body),
   });
-}
-
-function exampleCookieMiddleware(
-  request: ServerRequest,
-  requestID: string,
-  next: () => Handler | undefined,
-) {
-  let cookie = request.headers.get("Cookie");
-  if (!cookie) cookie = `key=${crypto.randomUUID()}`;
-  ExampleCookieStore.create(requestID, cookie);
-  const nextFn: Handler | undefined = next();
-  if (nextFn) {
-    nextFn(request, requestID, next);
-  }
 }
 
 const tests: {
@@ -117,7 +77,7 @@ const tests: {
         method: "HOGE",
       });
       assertEquals(response.status, 405);
-      assertEquals(await response.text(), "method not allowed.");
+      assertEquals(await response.text(), "HOGE: method not allowed.");
     },
   },
   {
@@ -125,27 +85,13 @@ const tests: {
     fn: async () => {
       const response = await fetch(`http://localhost:${port}/get/missing`);
       assertEquals(response.status, 404);
-      assertEquals(await response.text(), "no routes matched.");
-    },
-  },
-  {
-    name: "GET empty handler",
-    fn: async () => {
-      const response = await fetch(
-        `http://localhost:${port}/get/empty-handler`,
-      );
-      assertEquals(response.status, 404);
-      assertEquals(await response.text(), "missing handler(s).");
+      assertEquals(await response.text(), "/get/missing: no routes matched.");
     },
   },
   {
     name: "GET static routes",
     fn: async () => {
       const response = await fetch(`http://localhost:${port}/get/action`);
-      const requestID = response.headers.get("X-Request-ID");
-      assertExists(requestID);
-      // リクエスト処理後即時削除
-      assertEquals(RequestContext.read(requestID), undefined);
       assertEquals(
         await response.text(),
         JSON.stringify({
@@ -162,10 +108,6 @@ const tests: {
       const response = await fetch(
         `http://localhost:${port}/get/1234/parameters?foo=bar`,
       );
-      const requestID = response.headers.get("X-Request-ID");
-      assertExists(requestID);
-      // リクエスト処理後即時削除
-      assertEquals(RequestContext.read(requestID), undefined);
       assertEquals(
         await response.text(),
         JSON.stringify({
@@ -190,11 +132,6 @@ const tests: {
         },
         body: "foo=bar",
       });
-      const requestID = response.headers.get("X-Request-ID");
-      assertExists(requestID);
-      // リクエスト処理後即時削除
-      assertEquals(RequestContext.read(requestID), undefined);
-
       assertEquals(
         await response.text(),
         JSON.stringify({
@@ -219,15 +156,6 @@ const tests: {
           body: "foo=bar",
         },
       );
-      const requestID = response.headers.get("X-Request-ID");
-      assertExists(requestID);
-      // リクエスト処理後即時削除
-      assertEquals(RequestContext.read(requestID), undefined);
-
-      const cookie = response.headers.get("Set-Cookie");
-      assertExists(cookie);
-      assertEquals(cookie.length, 0);
-
       assertEquals(
         await response.text(),
         JSON.stringify({
@@ -238,27 +166,6 @@ const tests: {
             hoge: "fuga",
             resource_id: "1234",
           },
-        }),
-      );
-    },
-  },
-  {
-    name: "middleware example",
-    fn: async () => {
-      const response = await fetch(
-        `http://localhost:${port}/middleware/example`,
-      );
-
-      const cookie = response.headers.get("Set-Cookie");
-      assertExists(cookie);
-      assertEquals(cookie.length, 40);
-
-      assertEquals(
-        await response.text(),
-        JSON.stringify({
-          url: "/middleware/example",
-          method: "GET",
-          params: {},
         }),
       );
     },

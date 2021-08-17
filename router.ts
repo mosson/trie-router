@@ -1,6 +1,5 @@
 import { ServerRequest } from "https://deno.land/std@0.103.0/http/server.ts";
-import { Tree } from "./tree.ts";
-import { RequestContext } from "./request-context.ts";
+import { Params, Tree } from "./tree.ts";
 import { analyze } from "./url-analyzer.ts";
 
 export class MethodNotAllowed extends Error {}
@@ -26,88 +25,71 @@ type Routes<T> = {
   [method in Method]: Tree<T>;
 };
 
-export type Handler = (
-  request: ServerRequest,
-  requestID: string,
-  next: () => Handler | undefined,
-) => void;
+export type Handler = (request: ServerRequest, params: Params) => void;
 
 export class Router {
-  private routes: Routes<Handler[]>;
+  private routes: Routes<Handler>;
 
   constructor() {
     this.routes = {
-      GET: new Tree<Handler[]>(analyze),
-      POST: new Tree<Handler[]>(analyze),
-      PUT: new Tree<Handler[]>(analyze),
-      PATCH: new Tree<Handler[]>(analyze),
-      DELETE: new Tree<Handler[]>(analyze),
-      HEAD: new Tree<Handler[]>(analyze),
-      OPTIONS: new Tree<Handler[]>(analyze),
+      GET: new Tree<Handler>(analyze),
+      POST: new Tree<Handler>(analyze),
+      PUT: new Tree<Handler>(analyze),
+      PATCH: new Tree<Handler>(analyze),
+      DELETE: new Tree<Handler>(analyze),
+      HEAD: new Tree<Handler>(analyze),
+      OPTIONS: new Tree<Handler>(analyze),
     };
   }
 
-  private insert(method: Method, path: string, handlers: Handler[]) {
-    this.routes[method].insert(path, handlers);
+  private insert(method: Method, path: string, handler: Handler) {
+    this.routes[method].insert(path, handler);
   }
 
-  public get(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.GET, path, handlers);
+  public get(path: string, handler: Handler) {
+    this.insert(HandleMethods.GET, path, handler);
   }
 
-  public post(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.POST, path, handlers);
+  public post(path: string, handler: Handler) {
+    this.insert(HandleMethods.POST, path, handler);
   }
 
-  public put(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.PUT, path, handlers);
+  public put(path: string, handler: Handler) {
+    this.insert(HandleMethods.PUT, path, handler);
   }
 
-  public patch(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.PATCH, path, handlers);
+  public patch(path: string, handler: Handler) {
+    this.insert(HandleMethods.PATCH, path, handler);
   }
 
-  public delete(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.DELETE, path, handlers);
+  public delete(path: string, handler: Handler) {
+    this.insert(HandleMethods.DELETE, path, handler);
   }
 
-  public head(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.HEAD, path, handlers);
+  public head(path: string, handler: Handler) {
+    this.insert(HandleMethods.HEAD, path, handler);
   }
 
-  public options(path: string, handlers: Handler[]) {
-    this.insert(HandleMethods.OPTIONS, path, handlers);
+  public options(path: string, handler: Handler) {
+    this.insert(HandleMethods.OPTIONS, path, handler);
   }
 
   public resolve(request: ServerRequest) {
     const method: Method | string = request.method.toUpperCase();
 
-    if (!isMethod(method)) throw new MethodNotAllowed("method not allowed.");
+    if (!isMethod(method)) {
+      throw new MethodNotAllowed(`${method}: method not allowed.`);
+    }
 
-    const tree: Tree<Handler[]> = this.routes[method];
+    const tree: Tree<Handler> = this.routes[method];
     if (!tree) throw new Error("missing the route tree");
 
     const route = tree.search(request.url);
-    if (!route) throw new NoRoutesMatched("no routes matched.");
+    if (!route) throw new NoRoutesMatched(`${request.url}: no routes matched.`);
 
     const [leaf, params] = route;
-    const handlers: Handler[] = leaf.data;
-    if (!handlers[0]) throw new NoRoutesMatched("missing handler(s).");
-
-    const next = function (i?: number) {
-      return function () {
-        i === undefined ? i = 0 : i++;
-        return handlers[i];
-      };
-    }();
-
-    const requestID = crypto.randomUUID();
-    RequestContext.create(requestID, params);
-
-    try {
-      next()(request, requestID, next);
-    } finally {
-      RequestContext.delete(requestID);
-    }
+    const handler: Handler = leaf.data;
+    if (!handler) throw new NoRoutesMatched("missing handler.");
+    handler(request, params);
   }
 }

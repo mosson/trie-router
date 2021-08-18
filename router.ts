@@ -1,4 +1,3 @@
-import { ServerRequest } from "https://deno.land/std@0.103.0/http/server.ts";
 import { Params, Tree } from "./tree.ts";
 import { analyze } from "./url-analyzer.ts";
 
@@ -25,7 +24,7 @@ type Routes<T> = {
   [method in Method]: Tree<T>;
 };
 
-export type Handler = (request: ServerRequest, params: Params) => void;
+export type Handler = (request: Deno.RequestEvent, params: Params) => void;
 
 export class Router {
   private routes: Routes<Handler>;
@@ -74,8 +73,8 @@ export class Router {
     this.insert(HandleMethods.OPTIONS, path, handler);
   }
 
-  public resolve(request: ServerRequest) {
-    const method: Method | string = request.method.toUpperCase();
+  public resolve(event: Deno.RequestEvent) {
+    const method: Method | string = event.request.method.toUpperCase();
 
     if (!isMethod(method)) {
       throw new MethodNotAllowed(`${method}: method not allowed.`);
@@ -84,12 +83,15 @@ export class Router {
     const tree: Tree<Handler> = this.routes[method];
     if (!tree) throw new Error("missing the route tree");
 
-    const route = tree.search(request.url);
-    if (!route) throw new NoRoutesMatched(`${request.url}: no routes matched.`);
+    const url = new URL(event.request.url);
+    const route = tree.search(url.pathname + url.search);
+    if (!route) {
+      throw new NoRoutesMatched(`${url.pathname}: no routes matched.`);
+    }
 
     const [leaf, params] = route;
     const handler: Handler = leaf.data;
     if (!handler) throw new NoRoutesMatched("missing handler.");
-    handler(request, params);
+    handler(event, params);
   }
 }

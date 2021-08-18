@@ -1,47 +1,37 @@
 import { assertEquals } from "https://deno.land/std@0.103.0/testing/asserts.ts";
-import {
-  serve,
-  Server,
-  ServerRequest,
-} from "https://deno.land/std@0.103.0/http/server.ts";
 import { MethodNotAllowed, NoRoutesMatched, Router } from "./router.ts";
 import { Params } from "./tree.ts";
 
 const port = 50000 + Math.round(Math.random() * 10000);
-const server: Server = serve({ port: port });
+const server = Deno.listen({ port: port });
 
 setTimeout(async () => {
-  for await (const request of server) {
-    try {
-      router.resolve(request);
-    } catch (e: unknown) {
-      if (e instanceof MethodNotAllowed) {
-        request.respond({
-          status: 405,
-          body: e.message,
-        });
-        continue;
-      }
-      if (e instanceof NoRoutesMatched) {
-        request.respond({
-          status: 404,
-          body: e.message,
-        });
-        continue;
-      }
-      if (e instanceof Error) {
-        request.respond({
-          status: 400,
-          body: e.message,
-        });
-        continue;
-      }
+  for await (const conn of server) {
+    (async () => {
+      const httpConn = Deno.serveHttp(conn);
+      for await (const requestEvent of httpConn) {
+        try {
+          router.resolve(requestEvent);
+        } catch (e: unknown) {
+          if (e instanceof MethodNotAllowed) {
+            requestEvent.respondWith(new Response(e.message, { status: 405 }));
+            continue;
+          }
+          if (e instanceof NoRoutesMatched) {
+            requestEvent.respondWith(new Response(e.message, { status: 404 }));
+            continue;
+          }
+          if (e instanceof Error) {
+            requestEvent.respondWith(new Response(e.message, { status: 400 }));
+            continue;
+          }
 
-      request.respond({
-        status: 500,
-        body: "Internal Server Error",
-      });
-    }
+          requestEvent.respondWith(
+            new Response("Internal Server Error", { status: 500 }),
+          );
+        }
+      }
+    })();
   }
 });
 
@@ -52,18 +42,16 @@ router.post("/post/action", assertionHandler);
 router.post("/post/:resource_id/parameters", assertionHandler);
 
 function assertionHandler(
-  request: ServerRequest,
+  event: Deno.RequestEvent,
   params: Params,
 ) {
+  const url = new URL(event.request.url);
   const body = {
-    url: request.url,
-    method: request.method,
+    url: url.pathname + url.search,
+    method: event.request.method,
     params: params,
   };
-  request.respond({
-    status: 200,
-    body: JSON.stringify(body),
-  });
+  event.respondWith(new Response(JSON.stringify(body), { status: 200 }));
 }
 
 const tests: {
@@ -85,7 +73,10 @@ const tests: {
     fn: async () => {
       const response = await fetch(`http://localhost:${port}/get/missing`);
       assertEquals(response.status, 404);
-      assertEquals(await response.text(), "/get/missing: no routes matched.");
+      assertEquals(
+        await response.text(),
+        "/get/missing: no routes matched.",
+      );
     },
   },
   {
@@ -173,25 +164,23 @@ const tests: {
 ];
 
 const done = function (i = 0) {
-  return () => {
+  return (e?: unknown) => {
     i++;
     if (i >= tests.length) finish();
+    if (e) throw e;
   };
 }();
 
 function finish() {
-  server.close();
+  Object.keys(Deno.resources()).slice(3).forEach((rid) => {
+    Deno.close(Number(rid));
+  });
 }
-
-const fail = function (e: Error) {
-  finish();
-  throw e;
-};
 
 tests.forEach((test) => {
   Deno.test({
     name: test.name,
-    fn: () => test.fn().then(done).catch(fail),
+    fn: () => test.fn().then(done).catch(done),
     sanitizeResources: false,
     sanitizeOps: false,
   });

@@ -4,7 +4,7 @@ import { analyze } from "./url-analyzer.ts";
 export class MethodNotAllowed extends Error {}
 export class NoRoutesMatched extends Error {}
 
-const HandleMethods = {
+export const HandleMethods = {
   GET: "GET",
   POST: "POST",
   PUT: "PUT",
@@ -14,7 +14,7 @@ const HandleMethods = {
   OPTIONS: "OPTIONS",
 } as const;
 
-type Method = typeof HandleMethods[keyof typeof HandleMethods];
+export type Method = typeof HandleMethods[keyof typeof HandleMethods];
 
 function isMethod(arg: string): arg is Method {
   return Object.keys(HandleMethods).indexOf(arg) >= 0;
@@ -41,7 +41,7 @@ export class Router {
     };
   }
 
-  private insert(method: Method, path: string, handler: Handler) {
+  public insert(method: Method, path: string, handler: Handler) {
     this.routes[method].insert(path, handler);
   }
 

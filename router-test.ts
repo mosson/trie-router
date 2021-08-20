@@ -1,6 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.103.0/testing/asserts.ts";
-import { MethodNotAllowed, NoRoutesMatched, Router } from "./router.ts";
-import { Params } from "./tree.ts";
+import { MethodNotAllowed, NoRoutesMatched, Params, Router } from "./router.ts";
 
 const port = 50000 + Math.round(Math.random() * 10000);
 const server = Deno.listen({ port: port });

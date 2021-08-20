@@ -1,6 +1,5 @@
 import { Leaf, Node } from "./node.ts";
-
-export type Params = { [key: string]: string };
+import { Params } from "./router.ts";
 
 export type Analyzer = (data: string) => string[];
 

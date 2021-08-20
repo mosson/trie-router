@@ -1,4 +1,4 @@
-import { Params, Tree } from "./tree.ts";
+import { Tree } from "./tree.ts";
 import { analyze } from "./url-analyzer.ts";
 
 export class MethodNotAllowed extends Error {}
@@ -23,6 +23,8 @@ function isMethod(arg: string): arg is Method {
 type Routes<T> = {
   [method in Method]: Tree<T>;
 };
+
+export type Params = { [key: string]: string };
 
 export type Handler = (request: Deno.RequestEvent, params: Params) => void;
 

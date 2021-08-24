@@ -1,9 +1,10 @@
 {
   "deno.enable": true,
   "deno.lint": true,
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "denoland.vscode-deno",
   "deno.suggest.imports.hosts": {
     "https://deno.land": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
   }
 }

@@ -40,6 +40,15 @@ router.get("/get/:id/parameters", assertionHandler);
 router.post("/post/action", assertionHandler);
 router.post("/post/:resource_id/parameters", assertionHandler);
 
+// こうできたらいいな
+// router.get<{ id: string }>(
+//   "/foo/:id",
+//   (event: Deno.RequestEvent, params: { id: string }) => {
+//     event;
+//     params;
+//   },
+// );
+
 function assertionHandler(
   event: Deno.RequestEvent,
   params: Params,

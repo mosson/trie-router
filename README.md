@@ -29,6 +29,26 @@ router.get(
     event.respondWith(new Response("Hello, World"));
   }
 );
+
+router.get<{id: string}>(
+  "/get/:id/parameters", 
+  (event: Deno.RequestEvent, params: {id: string}) =>{ // getに渡したGenericsと一致するかチェックできる
+    console.log(params); // {id: "XXX"}
+    event.respondWith(new Response("Hello, World"));
+  }
+)
+
+// Argument of type '(event: Deno.RequestEvent, params: {foo: string;}) => void' is not assignable to parameter of type 'Handler<{ id: string; }>'.
+//   Types of parameters 'params' and 'params' are incompatible.
+//     Property 'foo' is missing in type '{ id: string; }' but required in type '{ foo: string; }'.
+router.get<{id: string}>(
+  "/get/:id/parameters", 
+  (event: Deno.RequestEvent, params: {foo: string}) =>{ // getに渡したGenericsと一致するかチェックできる
+    console.log(params); // {id: "XXX"}
+    event.respondWith(new Response("Hello, World"));
+  }
+)
+
 // パスのフレーズに `*` を含む場合それ以降のフレーズはノードに分割されない。
 // `*` 以降に文字列が含まれる場合はパラメータに渡される
 router.get(

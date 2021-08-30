@@ -26,52 +26,55 @@ type Routes<T> = {
 
 export type Params = { [key: string]: string };
 
-export type Handler = (request: Deno.RequestEvent, params: Params) => void;
+export type Handler<T> = (
+  request: Deno.RequestEvent,
+  params: T extends Params ? T : Params,
+) => void;
 
 export class Router {
-  private routes: Routes<Handler>;
+  private routes: Routes<Handler<unknown>>;
 
   constructor() {
     this.routes = {
-      GET: new Tree<Handler>(analyze),
-      POST: new Tree<Handler>(analyze),
-      PUT: new Tree<Handler>(analyze),
-      PATCH: new Tree<Handler>(analyze),
-      DELETE: new Tree<Handler>(analyze),
-      HEAD: new Tree<Handler>(analyze),
-      OPTIONS: new Tree<Handler>(analyze),
+      GET: new Tree<Handler<unknown>>(analyze),
+      POST: new Tree<Handler<unknown>>(analyze),
+      PUT: new Tree<Handler<unknown>>(analyze),
+      PATCH: new Tree<Handler<unknown>>(analyze),
+      DELETE: new Tree<Handler<unknown>>(analyze),
+      HEAD: new Tree<Handler<unknown>>(analyze),
+      OPTIONS: new Tree<Handler<unknown>>(analyze),
     };
   }
 
-  public insert(method: Method, path: string, handler: Handler) {
-    this.routes[method].insert(path, handler);
+  public insert<T>(method: Method, path: string, handler: Handler<T>) {
+    this.routes[method].insert(path, handler as Handler<unknown>);
   }
 
-  public get(path: string, handler: Handler) {
+  public get<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.GET, path, handler);
   }
 
-  public post(path: string, handler: Handler) {
+  public post<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.POST, path, handler);
   }
 
-  public put(path: string, handler: Handler) {
+  public put<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.PUT, path, handler);
   }
 
-  public patch(path: string, handler: Handler) {
+  public patch<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.PATCH, path, handler);
   }
 
-  public delete(path: string, handler: Handler) {
+  public delete<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.DELETE, path, handler);
   }
 
-  public head(path: string, handler: Handler) {
+  public head<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.HEAD, path, handler);
   }
 
-  public options(path: string, handler: Handler) {
+  public options<T>(path: string, handler: Handler<T>) {
     this.insert(HandleMethods.OPTIONS, path, handler);
   }
 
@@ -82,7 +85,7 @@ export class Router {
       throw new MethodNotAllowed(`${method}: method not allowed.`);
     }
 
-    const tree: Tree<Handler> = this.routes[method];
+    const tree: Tree<Handler<Params>> = this.routes[method];
     if (!tree) throw new Error("missing the route tree");
 
     const url = new URL(event.request.url);
@@ -92,7 +95,7 @@ export class Router {
     }
 
     const [leaf, params] = route;
-    const handler: Handler = leaf.data;
+    const handler: Handler<Params> = leaf.data;
     if (!handler) throw new NoRoutesMatched("missing handler.");
     handler(event, params);
   }

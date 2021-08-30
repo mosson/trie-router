@@ -36,18 +36,12 @@ setTimeout(async () => {
 
 const router: Router = new Router();
 router.get("/get/action", assertionHandler);
-router.get("/get/:id/parameters", assertionHandler);
+router.get<{ id: string }>("/get/:id/parameters", assertionHandler);
 router.post("/post/action", assertionHandler);
-router.post("/post/:resource_id/parameters", assertionHandler);
-
-// こうできたらいいな
-// router.get<{ id: string }>(
-//   "/foo/:id",
-//   (event: Deno.RequestEvent, params: { id: string }) => {
-//     event;
-//     params;
-//   },
-// );
+router.post<{ resource_id: string }>(
+  "/post/:resource_id/parameters",
+  assertionHandler,
+);
 
 function assertionHandler(
   event: Deno.RequestEvent,
